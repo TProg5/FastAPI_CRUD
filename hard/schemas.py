@@ -1,8 +1,15 @@
+from typing import List
 from pydantic import BaseModel
-from hard.todos.schemas import ToDoResponse
+
+
+class TodoItem(BaseModel):
+    todo_id: int
+    title: str
+    description: str
+    completed: int
 
 
 class TodoWithUserResponse(BaseModel):
     user_id: int
     username: str
-    todo: ToDoResponse
+    todo: List[TodoItem]

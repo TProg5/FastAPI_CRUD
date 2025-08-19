@@ -4,9 +4,10 @@ from fastapi import APIRouter
 from fastapi import HTTPException, Body
 from hard.dependencies import DBConnect
 
-from hard.schemas import TodoWithUserResponse
+from hard.schemas import TodoWithUserResponse, TodoItem
 from hard.users.schemas import User, UserResponse, DeleteUserResponse
-from hard.users.repository import register_user, delete_user
+from hard.users.repository import register_user, delete_user, get_user_todos
+
 
 user = APIRouter(
     prefix="/api"
@@ -24,7 +25,7 @@ async def register_user_endpoint(user: User, connection: DBConnect):
             username=user.username,
             password=user.password
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
@@ -38,7 +39,7 @@ async def register_user_endpoint(user: User, connection: DBConnect):
 
 
 @user.delete(
-    "/users/{user_id}", 
+    "/user/{user_id}", 
     response_model=DeleteUserResponse, 
     status_code=201
 )
@@ -58,4 +59,41 @@ async def delete_user_endpoint(user_id: int, connection: DBConnect):
     return DeleteUserResponse(
         message="User success deleted!", 
         user_id=user_id
+    )
+
+
+@user.get(
+    "/user/{user_id}/todos", 
+    response_model=TodoWithUserResponse, 
+    status_code=201
+)
+async def get_user_todos_endpoint(user_id: int, connection: DBConnect):
+    try:
+        rows = await get_user_todos(
+            connection=connection,
+            user_id=user_id
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    if not rows:
+        raise HTTPException(status_code=404, detail="User has no todos")
+    
+    username = rows[0]["username"]
+
+    todos = [
+        TodoItem(
+            todo_id=row["todo_id"],
+            title=row["title"],
+            description=row["description"],
+            completed=row["completed"]
+        )
+        for row in rows
+    ]
+
+    return TodoWithUserResponse(
+        user_id=user_id,
+        username=username,
+        todo=todos
     )

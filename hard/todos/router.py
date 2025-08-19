@@ -20,9 +20,7 @@ async def create_todo_endpoint(
     connection: DBConnect, 
     todo: Annotated[ToDo, Body()]
 ):  
-    if todo.user_id <= 0:
-        raise HTTPException(status_code=422, detail="user_id cannot be zero or a negative number")
-     
+    
     try:
         lastrowid = await create_todo(
             connection=connection,
