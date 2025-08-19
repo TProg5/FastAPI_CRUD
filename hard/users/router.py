@@ -24,6 +24,7 @@ async def register_user_endpoint(user: User, connection: DBConnect):
             username=user.username,
             password=user.password
         )
+        
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
@@ -48,13 +49,13 @@ async def delete_user_endpoint(user_id: int, connection: DBConnect):
             user_id=user_id
         )
 
-        if rowcount == 0:
-            raise HTTPException(status_code=404, detail={"User Not Found"})
-        
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
+    if rowcount == 0:
+        raise HTTPException(status_code=404, detail={"User Not Found"})
+    
     return DeleteUserResponse(
-        message="User success delided!", 
+        message="User success deleted!", 
         user_id=user_id
     )

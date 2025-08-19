@@ -11,7 +11,7 @@ from hard.todos.repository import (
 )
 
 todo = APIRouter(
-    prefix="/api"
+    prefix="/api",
 )
 
 
@@ -19,9 +19,12 @@ todo = APIRouter(
 async def create_todo_endpoint(
     connection: DBConnect, 
     todo: Annotated[ToDo, Body()]
-):
+):  
+    if todo.user_id <= 0:
+        raise HTTPException(status_code=422, detail="user_id cannot be zero or a negative number")
+     
     try:
-        todo_entity = await create_todo(
+        lastrowid = await create_todo(
             connection=connection,
             title=todo.title,
             description=todo.description, 
@@ -34,7 +37,7 @@ async def create_todo_endpoint(
     
     return ToDoResponse(
         message="ToDo successful created!",
-        id=todo_entity,
+        id=lastrowid,
         todo=ToDo(
             title=todo.title, 
             description=todo.description,
@@ -50,26 +53,25 @@ async def get_todo_endpoint(
     connection: DBConnect
 ):
     try:
-        todo_entity = await get_todo_by_id(
+        row = await get_todo_by_id(
             connection=connection,
             todo_id=todo_id
         )
         
-        if not todo_entity:
-            raise HTTPException(status_code=404, detail="ToDo not Found")
-        
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
-
+    if not row:
+        raise HTTPException(status_code=404, detail="Todo not Found")
+    
     return ToDoResponse(
         id=todo_id,
         todo=ToDo(
             id=todo_id, 
-            title=todo_entity["title"], 
-            description=todo_entity["description"], 
-            completed=bool(todo_entity["completed"]),
-            user_id=todo_entity["user_id"]
+            title=row["title"], 
+            description=row["description"], 
+            completed=bool(row["completed"]),
+            user_id=row["user_id"]
         )
     )
 
@@ -82,7 +84,7 @@ async def update_todo_endpoint(
     todo: Annotated[ToDo, Body()]
 ):
     try:
-        todo_entity = await update_todo(
+        rowcount = await update_todo(
             connection=connection,
             todo_id=todo_id,
             title=todo.title,
@@ -90,11 +92,11 @@ async def update_todo_endpoint(
             completed=todo.completed
         )
 
-        if todo_entity == 0:
-            raise HTTPException(status_code=404, detail="Todo not found")
-
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+    if rowcount == 0:
+        raise HTTPException(status_code=404, detail="Todo not found")
     
     return ToDoResponse(
         id=todo_id,
@@ -119,11 +121,11 @@ async def delete_todo_endpoint(
             todo_id=todo_id
         )
         
-        if todo_entity == 0:
-            raise HTTPException(status_code=404, detail="Todo not found")
-        
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+    if todo_entity == 0:
+        raise HTTPException(status_code=404, detail="Todo not found")
     
     return ToDoResponseMessage(
         message=f"Todo with ID: {todo_id} deleted successfully"
